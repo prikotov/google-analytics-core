@@ -14,7 +14,7 @@ description: Топ-страницы GA4 — пути и названия стр
 ## Запуск
 
 ```bash
-php ga4.php [--site <name>] [--days N | --date1 D --date2 D] [--limit N]
+php scripts/pages.php [--site <name>] [--days N | --date1 D --date2 D] [--limit N]
 ```
 
 | Опция | Описание | По умолчанию |
@@ -27,9 +27,9 @@ php ga4.php [--site <name>] [--days N | --date1 D --date2 D] [--limit N]
 ## Примеры
 
 ```bash
-php ga4.php                                     # default_site, 28 дней, топ-50
-php ga4.php --site prikotov.pro --days 7 --limit 20
-php ga4.php -s task.ai-aid.pro --date1 2026-11-01 --date2 2026-11-13
+php scripts/pages.php  # default_site, 28 дней, топ-50
+php scripts/pages.php --site prikotov.pro --days 7 --limit 20
+php scripts/pages.php -s task.ai-aid.pro --date1 2026-11-01 --date2 2026-11-13
 ```
 
 ## Метрики в отчёте

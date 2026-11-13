@@ -391,6 +391,114 @@ final class Ga4Client
         return $date1 === $date2 ? $date1 : "$date1 … $date2";
     }
 
+    /**
+     * Общий CLI-раннер саб-скиллов: разбор аргументов и help, checkGitignore,
+     * loadConfig, resolveSite/getPropertyId, период (в realtime-режиме — без дат),
+     * создание клиента, сохранение CSV/Markdown и вывод путей/числа строк.
+     * Специализированное (тела отчётов, лимиты, предупреждения) — в $buildReports.
+     *
+     * Опции:
+     *   - title:        заголовок отчёта по умолчанию (для Markdown);
+     *   - realtime:     realtime-режим — без --days/--date1/--date2 и dateRanges,
+     *                   в шапке «Realtime-срез» вместо периода;
+     *   - defaultLimit: --limit по умолчанию (в help и в контексте замыкания);
+     *   - limitHelp:    своё описание --limit в help (иначе из defaultLimit);
+     *   - helpNote:     дополнительные строки в конце help.
+     *
+     * $buildReports получает клиента и контекст
+     * {site, propertyId, date1, date2 (null в realtime), limit (явный --limit или
+     * null), defaultLimit, title} и возвращает список отчётов
+     * [{prefix, title, rows, summary?}]: раннер сохраняет каждый в
+     * ga4_reports/YYYY-MM-DD/<prefix>_<timestamp>.{csv,md}, печатает пути и число
+     * строк, затем строки summary (например итог realtime-пользователей).
+     *
+     * @param array{title?: string, realtime?: bool, defaultLimit?: int, limitHelp?: string, helpNote?: string} $options
+     * @param callable(Ga4Client, array): list<array{prefix: string, title: string, rows: list<array<string, string|int|float>>, summary?: string}> $buildReports
+     */
+    public static function runCli(array $argv, array $options, callable $buildReports): void
+    {
+        try {
+            $title = (string)($options['title'] ?? 'GA4: отчёт');
+            $realtime = (bool)($options['realtime'] ?? false);
+            $defaultLimit = (int)($options['defaultLimit'] ?? 50);
+
+            $args = self::parseCliArgs($argv);
+
+            if ($args['help']) {
+                $usage = 'php ' . ($argv[0] ?? 'script.php')
+                    . ($realtime ? ' [--site <name>] [--limit N]' : ' [--site <name>] [--days N | --date1 D --date2 D] [--limit N]');
+                echo "\n  Использование:\n    $usage\n\n  Опции:\n";
+                echo "    --site <name>      Сайт из properties конфига (иначе default_site)\n";
+                if (!$realtime) {
+                    echo "    --days <n>         Последние N дней, включая сегодня (по умолчанию 28)\n";
+                    echo "    --date1/--date2    Явный период YYYY-MM-DD (оба или ни одного)\n";
+                }
+                $limitHelp = $options['limitHelp'] ?? "Максимум строк (по умолчанию $defaultLimit)";
+                echo "    --limit <n>        $limitHelp\n";
+                if (isset($options['helpNote'])) {
+                    echo "\n  {$options['helpNote']}\n";
+                }
+                exit(0);
+            }
+
+            [$date1, $date2] = $realtime
+                ? [null, null]
+                : self::dateRange($args['days'], $args['date1'], $args['date2']);
+
+            self::checkGitignore();
+            $config = self::loadConfig();
+
+            $site = self::resolveSiteName($config, $args['site']);
+            $propertyId = self::getPropertyId($config, $args['site']);
+            $client = new self($config['service_account_file']);
+
+            $now = date('Y-m-d H:i:s');
+
+            echo "\n  Сайт: $site ($propertyId)\n";
+            echo $realtime ? "  Realtime-срез: $now\n\n" : '  Период: ' . self::periodLabel($date1, $date2) . "\n\n";
+
+            /** @var list<array{prefix: string, title: string, rows: list<array<string, string|int|float>>, summary?: string}> $reports */
+            $reports = $buildReports($client, [
+                'site' => $site,
+                'propertyId' => $propertyId,
+                'date1' => $date1,
+                'date2' => $date2,
+                'limit' => $args['limit'],
+                'defaultLimit' => $defaultLimit,
+                'title' => $title,
+            ]);
+
+            $reportDir = self::createReportDir();
+            $timestamp = self::getFileTimestamp();
+            $subtitle = $realtime
+                ? sprintf('Сайт: %s (%s), realtime на %s', $site, $propertyId, $now)
+                : sprintf('Сайт: %s (%s), период: %s', $site, $propertyId, self::periodLabel($date1, $date2));
+
+            echo "  Отчёты:\n";
+            $summaries = [];
+            foreach ($reports as $report) {
+                $csvFile = "$reportDir/{$report['prefix']}_$timestamp.csv";
+                $mdFile = "$reportDir/{$report['prefix']}_$timestamp.md";
+                self::saveCsv($report['rows'], $csvFile);
+                self::saveMarkdown($report['rows'], $mdFile, $report['title'], $subtitle);
+
+                echo "    {$report['prefix']}:\n      - $csvFile\n      - $mdFile\n";
+                echo '      строк: ' . count($report['rows']) . "\n";
+
+                if (isset($report['summary'])) {
+                    $summaries[] = (string)$report['summary'];
+                }
+            }
+
+            foreach ($summaries as $line) {
+                echo "\n  $line\n";
+            }
+        } catch (Throwable $e) {
+            echo "\n  Ошибка: " . $e->getMessage() . "\n";
+            exit(1);
+        }
+    }
+
     // --- API ----------------------------------------------------------------
 
     /**

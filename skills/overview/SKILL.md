@@ -14,7 +14,7 @@ description: Сводка трафика GA4 по дням — сессии, п�
 ## Запуск
 
 ```bash
-php ga4.php [--site <name>] [--days N | --date1 D --date2 D] [--limit N]
+php scripts/overview.php [--site <name>] [--days N | --date1 D --date2 D] [--limit N]
 ```
 
 | Опция | Описание | По умолчанию |
@@ -29,9 +29,9 @@ php ga4.php [--site <name>] [--days N | --date1 D --date2 D] [--limit N]
 ## Примеры
 
 ```bash
-php ga4.php                                     # default_site, 28 дней
-php ga4.php --site prikotov.pro --days 7        # 7 дней по сайту prikotov.pro
-php ga4.php -s task.ai-aid.pro --date1 2026-11-01 --date2 2026-11-13
+php scripts/overview.php                                     # default_site, 28 дней
+php scripts/overview.php --site prikotov.pro --days 7        # 7 дней по сайту prikotov.pro
+php scripts/overview.php -s task.ai-aid.pro --date1 2026-11-01 --date2 2026-11-13
 ```
 
 ## Метрики в отчёте

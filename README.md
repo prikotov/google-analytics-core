@@ -2,9 +2,10 @@
 
 > Библиотека и каталог skills для работы с Google Analytics 4 (Data API v1beta)
 
-Этот пакет содержит `Ga4Client` — общий API-клиент для всех саб-скиллов GA4:
+Этот пакет содержит `Ga4Client` — общий API-клиент и CLI-раннер для всех саб-скиллов GA4:
 - Аутентификация service account (JWT RS256 → access_token, кэш токена)
 - Запросы runReport / runRealtimeReport / getMetadata
+- CLI-раннер `runCli()`: парсинг аргументов, конфиг, сохранение и вывод отчётов
 - Экспорт отчётов в CSV/Markdown
 
 PHP 8.4+, без composer-зависимостей (нужны расширения `curl` и `openssl`).
@@ -74,11 +75,11 @@ cp .opencode/skills/google-analytics-core/ga4_config.example.json ./ga4_config.j
 ## Использование
 
 ```bash
-php skills/overview/ga4.php                                   # сводка, 28 дней
-php skills/overview/ga4.php --site site1.com --days 7         # 7 дней
-php skills/traffic/ga4.php -s site1.com --date1 2026-11-01 --date2 2026-11-13
-php skills/pages/ga4.php --days 28 --limit 20
-php skills/realtime/ga4.php                                   # последние ~30 минут
+php skills/overview/scripts/overview.php                     # сводка, 28 дней
+php skills/overview/scripts/overview.php --site site1.com --days 7   # 7 дней
+php skills/traffic/scripts/traffic.php -s site1.com --date1 2026-11-01 --date2 2026-11-13
+php skills/pages/scripts/pages.php --days 28 --limit 20
+php skills/realtime/scripts/realtime.php                     # последние ~30 минут
 ```
 
 Каждый запуск создаёт CSV + Markdown в `ga4_reports/YYYY-MM-DD/` текущего каталога
@@ -111,10 +112,10 @@ your-project/
     ├── templates/report.md    # Шаблон аналитического отчёта
     ├── references/api.md      # Справка GA4 Data API v1beta
     └── skills/
-        ├── overview/  (SKILL.md + ga4.php)
-        ├── traffic/   (SKILL.md + ga4.php)
-        ├── pages/     (SKILL.md + ga4.php)
-        └── realtime/  (SKILL.md + ga4.php)
+        ├── overview/  (SKILL.md + scripts/overview.php)
+        ├── traffic/   (SKILL.md + scripts/traffic.php)
+        ├── pages/     (SKILL.md + scripts/pages.php)
+        └── realtime/  (SKILL.md + scripts/realtime.php)
 ```
 
 ## Безопасность

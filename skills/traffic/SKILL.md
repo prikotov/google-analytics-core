@@ -14,7 +14,7 @@ description: Источники трафика GA4 — группы канало
 ## Запуск
 
 ```bash
-php ga4.php [--site <name>] [--days N | --date1 D --date2 D] [--limit N]
+php scripts/traffic.php [--site <name>] [--days N | --date1 D --date2 D] [--limit N]
 ```
 
 | Опция | Описание | По умолчанию |
@@ -30,9 +30,9 @@ php ga4.php [--site <name>] [--days N | --date1 D --date2 D] [--limit N]
 ## Примеры
 
 ```bash
-php ga4.php                                     # default_site, 28 дней
-php ga4.php --site prikotov.pro --days 7 --limit 20
-php ga4.php -s task.ai-aid.pro --date1 2026-11-01 --date2 2026-11-13
+php scripts/traffic.php  # default_site, 28 дней
+php scripts/traffic.php --site prikotov.pro --days 7 --limit 20
+php scripts/traffic.php -s task.ai-aid.pro --date1 2026-11-01 --date2 2026-11-13
 ```
 
 ## Метрики в отчёте

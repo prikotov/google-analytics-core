@@ -6,28 +6,29 @@ license: MIT
 
 # Google Analytics 4 Core
 
-Библиотека `Ga4Client.php` (Data API v1beta, service account, только чтение) и
-каталог саб-скиллов. Конфиг общий: `ga4_config.json` (см. README.md).
+Библиотека `Ga4Client.php` (Data API v1beta, service account, только чтение;
+общий API-клиент и CLI-раннер `runCli` для саб-скиллов) и каталог саб-скиллов.
+Конфиг общий: `ga4_config.json` (см. README.md).
 
 ## Доступные skills
 
-### ga4-overview — `skills/overview/ga4.php`
+### ga4-overview — `skills/overview/scripts/overview.php`
 Сводка трафика по дням:
 - sessions, totalUsers, screenPageViews
 - engagedSessions, bounceRate, averageSessionDuration
 
-### ga4-traffic — `skills/traffic/ga4.php`
+### ga4-traffic — `skills/traffic/scripts/traffic.php`
 Источники трафика:
 - Группы каналов: sessionDefaultChannelGroup
 - Детали: sessionSourceMedium (google / organic, yandex / organic…)
 - Метрики качества: вовлечённость, bounceRate, длительность сессии
 
-### ga4-pages — `skills/pages/ga4.php`
+### ga4-pages — `skills/pages/scripts/pages.php`
 Топ-страницы:
 - pagePath + unifiedScreenName
 - Просмотры, пользователи, суммарное время вовлечённости, bounceRate
 
-### ga4-realtime — `skills/realtime/ga4.php`
+### ga4-realtime — `skills/realtime/scripts/realtime.php`
 Сейчас на сайте (последние ~30 минут):
 - Активные пользователи и просмотры
 - Страницы, страны и устройства realtime
@@ -36,7 +37,7 @@ license: MIT
 ## Общие параметры
 
 ```bash
-php skills/<skill>/ga4.php [--site <name>] [--days N | --date1 D --date2 D] [--limit N]
+php skills/<skill>/scripts/<skill>.php [--site <name>] [--days N | --date1 D --date2 D] [--limit N]
 ```
 
 - `--site` — сайт из properties конфига; без него — `default_site`.

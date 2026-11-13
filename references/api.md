@@ -2,6 +2,17 @@
 
 Проверено живыми запросами 13.11.2026 (properties 558541716, 559035138).
 
+Запуск отчётов (точки входа саб-скиллов, общий раннер — `Ga4Client::runCli()`):
+
+```bash
+php skills/overview/scripts/overview.php [--site <name>] [--days N | --date1 D --date2 D] [--limit N]
+php skills/traffic/scripts/traffic.php   [--site <name>] [--days N | --date1 D --date2 D] [--limit N]
+php skills/pages/scripts/pages.php       [--site <name>] [--days N | --date1 D --date2 D] [--limit N]
+php skills/realtime/scripts/realtime.php [--site <name>] [--limit N]
+```
+
+Ниже — справка по HTTP API, на котором построен клиент `Ga4Client`.
+
 ## Подключение
 
 - Base URL: `https://analyticsdata.googleapis.com/v1beta`

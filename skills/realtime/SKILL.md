@@ -14,7 +14,7 @@ description: Realtime GA4 — кто на сайте прямо сейчас: а
 ## Запуск
 
 ```bash
-php ga4.php [--site <name>] [--limit N]
+php scripts/realtime.php [--site <name>] [--limit N]
 ```
 
 | Опция | Описание | По умолчанию |
@@ -30,9 +30,9 @@ php ga4.php [--site <name>] [--limit N]
 ## Примеры
 
 ```bash
-php ga4.php                       # default_site
-php ga4.php --site prikotov.pro
-php ga4.php -s task.ai-aid.pro --limit 10
+php scripts/realtime.php  # default_site
+php scripts/realtime.php --site prikotov.pro
+php scripts/realtime.php -s task.ai-aid.pro --limit 10
 ```
 
 ## Метрики и интерпретация
