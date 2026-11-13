@@ -394,6 +394,21 @@ final class Ga4Client
     // --- API ----------------------------------------------------------------
 
     /**
+     * propertyId интерполируется в URL-путь — допускаем только цифры
+     * (GA4 propertyId — число вида 293984563). Иначе InvalidArgumentException:
+     * кривое значение из конфига не должно превращаться в подмену пути.
+     */
+    private static function assertPropertyId(string $propertyId): string
+    {
+        $id = trim($propertyId);
+        if (preg_match('/^\d+$/', $id) !== 1) {
+            throw new InvalidArgumentException("propertyId должен быть числом (например 293984563), получено: \"$propertyId\"");
+        }
+
+        return $id;
+    }
+
+    /**
      * Отчёт Data API: POST /v1beta/properties/{propertyId}:runReport.
      * Тело: dateRanges, dimensions, metrics, orderBys, limit…
      *
@@ -402,7 +417,7 @@ final class Ga4Client
      */
     public function runReport(string $propertyId, array $body): array
     {
-        return $this->request("/properties/{$propertyId}:runReport", $body);
+        return $this->request('/properties/' . self::assertPropertyId($propertyId) . ':runReport', $body);
     }
 
     /**
@@ -414,7 +429,7 @@ final class Ga4Client
      */
     public function runRealtimeReport(string $propertyId, array $body): array
     {
-        return $this->request("/properties/{$propertyId}:runRealtimeReport", $body);
+        return $this->request('/properties/' . self::assertPropertyId($propertyId) . ':runRealtimeReport', $body);
     }
 
     /**
@@ -425,7 +440,7 @@ final class Ga4Client
      */
     public function getMetadata(string $propertyId): array
     {
-        return $this->request("/properties/{$propertyId}/metadata", null);
+        return $this->request('/properties/' . self::assertPropertyId($propertyId) . '/metadata', null);
     }
 
     /**
@@ -478,7 +493,8 @@ final class Ga4Client
     /**
      * Универсальный запрос к Data API. При сетевых ошибках, HTTP 429 и 5xx —
      * exponential backoff с учётом Retry-After (но не дольше MAX_BACKOFF_SECONDS),
-     * до MAX_RETRIES повторов. Токен не логируется.
+     * до MAX_RETRIES повторов. HTTP 401 — кэш токена сбрасывается и запрос
+     * повторяется один раз со свежим токеном (без зацикливания). Токен не логируется.
      *
      * @param array<string, mixed>|null $body null → GET, массив → POST JSON
      * @return array<string, mixed>
@@ -488,6 +504,7 @@ final class Ga4Client
         $attempt = 0;
         $response = false;
         $httpCode = 0;
+        $tokenRetried = false;
 
         while (true) {
             $ch = curl_init(self::API_BASE . $path);
@@ -542,6 +559,15 @@ final class Ga4Client
             }
 
             $httpCode = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
+            if ($httpCode === 401 && !$tokenRetried) {
+                // Токен отклонён сервером (ротация ключа, revoke, чужой кэш):
+                // сбрасываем память и файл кэша, один раз повторяем со свежим токеном.
+                curl_close($ch);
+                $tokenRetried = true;
+                $this->invalidateToken();
+                continue;
+            }
 
             if ($httpCode === 429 || $httpCode >= 500) {
                 $retryAfter = $responseHeaders['retry-after'] ?? null;
@@ -640,13 +666,42 @@ final class Ga4Client
     }
 
     /**
+     * Сброс токена в памяти и файла кэша: после отклонения токена сервером
+     * (HTTP 401) следующий ensureToken() получит свежий токен по JWT.
+     */
+    private function invalidateToken(): void
+    {
+        $this->accessToken = null;
+        $this->tokenExpiresAt = 0;
+
+        $file = $this->tokenCachePath();
+        if (is_file($file)) {
+            @unlink($file);
+        }
+    }
+
+    /**
+     * Атомарная запись кэша токена: tempnam (файл сразу с правами 0600) →
+     * явный chmod → rename поверх старого файла. Права 0600 выставляются ДО
+     * того, как в файл попадёт секрет; rename не оставляет частично записанный
+     * файл. Кэш — best effort: неудача не ломает запуск (токен живёт в памяти).
+     *
      * @param array{access_token: string, expires_at: int} $token
      */
     private function writeTokenCache(array $token): void
     {
         $file = $this->tokenCachePath();
-        file_put_contents($file, json_encode($token) . "\n");
-        @chmod($file, 0600);
+        $tmp = tempnam(dirname($file), '.ga4_token_');
+        if ($tmp === false) {
+            return;
+        }
+
+        if (!chmod($tmp, 0600)
+            || file_put_contents($tmp, json_encode($token) . "\n") === false
+            || !rename($tmp, $file)
+        ) {
+            @unlink($tmp);
+        }
     }
 
     /**
@@ -880,7 +935,7 @@ final class Ga4Client
             case 400:
                 return "Некорректный запрос [HTTP 400]. Проверьте имена dimensions/metrics (getMetadata) и формат тела. Ответ API: $apiMessage";
             case 401:
-                return "Токен доступа отклонён [HTTP 401]. Удалите кэш ga4_token.json и повторите; проверьте срок действия JSON-ключа сервисного аккаунта.";
+                return "Токен доступа отклонён [HTTP 401], в том числе после сброса кэша ga4_token.json и повтора со свежим токеном. Проверьте срок действия JSON-ключа сервисного аккаунта и его доступ к свойству.";
             case 403:
                 return "Доступ запрещён [HTTP 403]. Добавьте сервисному аккаунту (email из ключа, поле client_email) роль «Просмотр»/Viewer в GA4: Администратор → свойство → Управление доступом. Ответ API: $apiMessage";
             case 429:

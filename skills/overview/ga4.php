@@ -25,7 +25,7 @@ try {
         echo "    --site <name>      Сайт из properties конфига (иначе default_site)\n";
         echo "    --days <n>         Последние N дней, включая сегодня (по умолчанию 28)\n";
         echo "    --date1/--date2    Явный период YYYY-MM-DD (оба или ни одного)\n";
-        echo "    --limit <n>        Максимум строк (по умолчанию 90 — по строке на день)\n";
+        echo "    --limit <n>        Максимум строк (по умолчанию покрывает весь период, минимум 90)\n";
         exit(0);
     }
 
@@ -41,6 +41,15 @@ try {
     echo "\n  Сайт: $site ($propertyId)\n";
     echo '  Период: ' . Ga4Client::periodLabel($date1, $date2) . "\n\n";
 
+    // Одна строка на день: лимит по умолчанию покрывает весь диапазон
+    // (GA4 runReport допускает limit до 100000). Явный --limit меньше числа
+    // дней — предупреждаем об усечении, молча не обрезаем.
+    $rangeDays = (int)round((strtotime($date2) - strtotime($date1)) / 86400) + 1;
+    $limit = $args['limit'] ?? max(90, $rangeDays);
+    if ($limit < $rangeDays) {
+        echo "  ⚠️  --limit $limit меньше числа дней в периоде ($rangeDays): отчёт будет усечён.\n\n";
+    }
+
     $report = $client->runReport($propertyId, [
         'dateRanges' => [['startDate' => $date1, 'endDate' => $date2]],
         'dimensions' => [['name' => 'date']],
@@ -53,7 +62,7 @@ try {
             ['name' => 'averageSessionDuration'],
         ],
         'orderBys' => [['dimension' => ['dimensionName' => 'date']]],
-        'limit' => $args['limit'] ?? 90,
+        'limit' => $limit,
     ]);
 
     $rows = $client->flatRows($report);

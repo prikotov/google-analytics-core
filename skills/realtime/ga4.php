@@ -13,6 +13,8 @@ declare(strict_types=1);
  *
  * Отчёты: CSV + Markdown в ga4_reports/YYYY-MM-DD/ (текущий каталог).
  * Realtime API без dateRanges: окно ~последние 30 минут.
+ * Итог «активные пользователи» — отдельным запросом БЕЗ dimensions:
+ * сумма activeUsers по срезам завышает (один визит на N страницах = N).
  * Секреты не логируются.
  */
 
@@ -75,6 +77,13 @@ try {
         'limit' => 30,
     ]));
 
+    // Итог «активные пользователи» — отдельный запрос БЕЗ dimensions:
+    // сумма activeUsers по срезам завышает (один визит на N страницах = N).
+    $totalRows = $client->flatRows($client->runRealtimeReport($propertyId, [
+        'metrics' => [['name' => 'activeUsers']],
+    ]));
+    $totalUsers = (int)($totalRows[0]['activeUsers'] ?? 0);
+
     $timestamp = Ga4Client::getFileTimestamp();
     $reportDir = Ga4Client::createReportDir();
     $subtitle = sprintf('Сайт: %s (%s), realtime на %s', $site, $propertyId, date('Y-m-d H:i:s'));
@@ -86,7 +95,6 @@ try {
         'minutes' => [$minutes, 'GA4 Realtime: активные пользователи по минутам'],
     ];
 
-    $totalUsers = 0;
     echo "  Отчёты:\n";
     foreach ($reports as $name => [$rows, $title]) {
         $csvFile = "$reportDir/realtime_{$name}_$timestamp.csv";
@@ -98,12 +106,6 @@ try {
         echo "      - $csvFile\n";
         echo "      - $mdFile\n";
         echo '      строк: ' . count($rows) . "\n";
-
-        if ($name === 'pages') {
-            foreach ($rows as $row) {
-                $totalUsers += (int)($row['activeUsers'] ?? 0);
-            }
-        }
     }
 
     echo "\n  Активные пользователи сейчас: $totalUsers\n";
