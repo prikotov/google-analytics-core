@@ -1,0 +1,17 @@
+# Config files
+ga4_config.json
+ga4_token.json
+
+# Reports
+ga4_reports/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
