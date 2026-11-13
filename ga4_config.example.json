@@ -1,0 +1,7 @@
+{
+  "properties": {
+    "example.com": "000000000"
+  },
+  "service_account_file": "/absolute/path/to/service-account-key.json",
+  "default_site": "example.com"
+}
